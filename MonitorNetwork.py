@@ -20,7 +20,7 @@ while True:
     io_2 = psutil.net_io_counters()
     us,ds = io_2.bytes_sent - bytes_sent, io.bytes_recv-bytes_recv
 
-
+    uploadSpeed5 = get_size(us / UPDATE_DELAY)
     print(f"Upload: {get_size(io_2.bytes_sent)}   "
           f", Download: {get_size(io_2.bytes_recv)}   "
           f", Upload Speed: {get_size(us / UPDATE_DELAY)}/s   "

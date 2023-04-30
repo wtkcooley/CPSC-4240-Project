@@ -29,4 +29,6 @@ while True:
     df = pd.DataFrame(data)
     df.sort_values("Download", inplace=True, ascending=False)
     os.system("cls") if "nt" in os.name else os.system("clear")
+
+    message = df.to_string()
     print(df.to_string())
