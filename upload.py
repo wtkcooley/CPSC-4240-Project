@@ -6,7 +6,6 @@ import pandas as pd
 UPDATE_DELAY = 1 
 
 def get_size(bytes):
-  
     for unit in ['', 'K', 'M', 'G', 'T', 'P']:
         if bytes < 1024:
             return f"{bytes:.2f}{unit}B"
@@ -27,6 +26,6 @@ while True:
         })
     io = io_2
     df = pd.DataFrame(data)
-    df.sort_values("Download", inplace=True, ascending=False)
+    df.sort_values("Upload", inplace=True, ascending=False)
     os.system("cls") if "nt" in os.name else os.system("clear")
     print(df.to_string())

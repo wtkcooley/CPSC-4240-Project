@@ -1,13 +1,24 @@
+from time import sleep
 import psutil
 import datetime
 import pandas as pd
 from tkinter import *
 
 TITLE = "CPSC 4200 Final - System Monitor Tool"
-WIDTH = 720 #px
-HEIGHT = 1080 #px
-MAX_PROCESSES = 5
+WIDTH = 1080 #px
+HEIGHT = 720 #px
+MAX_PROCESSES = 20
+UPDATE_INTERVAL = 1000 #ms
+FONTSIZE = 8
+CELL_WIDTH = 16
+WINDOW = Tk()
 
+"""Builds Dataframe of Process info.
+
+:param process_df: data frame with all process info
+:param system_info: data frame with all system info
+:result: Updates WINDOW with new info
+"""
 def get_process_info():      
     #Creating lists to store the corresponding information
     cpu_usage= []
@@ -40,9 +51,9 @@ def get_process_info():
     #Saving the process information in a python dictionary
     data = {"PIds":pids,
             "Name": name,
-            "CPU Percentage (%)":cpu_usage,
+            "CPU %":cpu_usage,
             "Memory Usages (MB)":memory_usage,
-            "Memory Percentage (%)": memory_usage_percentage,
+            "Memory %": memory_usage_percentage,
             "Status": status,
             "Created Time": create_time,
             "Threads": threads,
@@ -62,40 +73,90 @@ def get_process_info():
 
     return process_df
 
+# Helper function for formating Network info
+def get_size(bytes):
+    for unit in ['', 'K', 'M', 'G', 'T', 'P']:
+        if bytes < 1024:
+            return f"{bytes:.2f}{unit}B"
+        bytes /= 1024
+
+def get_network_info():
+    io = psutil.net_io_counters(pernic=True)
+    sleep(1)
+    data = []
+    for iface, iface_io in io.items():
+        upload_speed, download_speed = io[iface].bytes_sent - iface_io.bytes_sent, io[iface].bytes_recv - iface_io.bytes_recv
+        data.append({
+            "iface": iface, 
+            "Upload": get_size(io[iface].bytes_sent),
+            "Upload Speed": f"{get_size(upload_speed)}/s",
+            "Download Speed": f"{get_size(download_speed)}/s",
+        })
+    io = io
+    df = pd.DataFrame(data)
+    df.sort_values("Upload", inplace=True, ascending=False)
+    return df
+
 """Builds TKinter Window GUI.
 
 :param process_df: data frame with all process info
 :param system_info: data frame with all system info
-:returns: Tkinter GUI window
+:result: Updates WINDOW with new info
 """
-def make_gui(window, process_df):
+def make_gui(process_df, network_df):
+    # Get length of Process Dataframe
     r, c = process_df.shape
-    
-    process_df = get_process_info()
-    for col in process_df.columns:
-        print(col)
-
+    # Make Dataframe a list
     li = [process_df.columns.values.tolist()] + process_df.values.tolist()
-    print(li)
 
+    # Add process info to Tkinter grid
+    i, j = 0, 0
     for i in range(r):
         for j in range(c):
-            e = Label(window, text=str(li[i][j]),width=20, fg='blue',
-                        font=('Arial',16,'bold'))
+            e = Label(WINDOW, text=str(li[i][j]),width=CELL_WIDTH, fg='blue',
+                        font=('Arial',FONTSIZE,'bold'))
             e.grid(row=i, column=j)
+    
+    # Add Network Label and spacing to Tkinter Grid
+    e = Label(WINDOW, text="",width=CELL_WIDTH, fg='blue',
+                        font=('Arial',FONTSIZE,'bold'))
+    e.grid(row=i+1, column=0)
+    e = Label(WINDOW, text="Network Status",width=CELL_WIDTH, fg='blue',
+                        font=('Arial',FONTSIZE,'bold'))
+    e.grid(row=i+2, column=0)
 
+    # Get length of network dataframe + x value of previous dataframe
+    r, c = network_df.shape
+    row = process_df.shape[0] + 3
+
+    # Convert network dataframe to list
+    li = [network_df.columns.values.tolist()] + network_df.values.tolist()
+
+    # Add network data to Tkinter grid
+    for i in range(r):
+        for j in range(c):
+            e = Label(WINDOW, text=str(li[i][j]),width=CELL_WIDTH, fg='blue',
+                        font=('Arial',FONTSIZE,'bold'))
+            e.grid(row=(i + row), column=j)
+
+
+# Recursively get sys info and update GUI
+def update():
+    process_df = get_process_info()
+    network_df = get_network_info()
+    make_gui(process_df, network_df)
+    WINDOW.after(1000, update)
 
 def main():
-    # Run diagnostics on system and get a data frame with process info
-    process_df = get_process_info()
+    # Setup GUI
+    WINDOW.title(TITLE)
+    #WINDOW.geometry(str(WIDTH)+"x"+str(HEIGHT))
 
-    # Create GUI and use dataframe to fill in info
-    window = Tk()
-    window.title(TITLE)
-    make_gui(window, process_df)
+    # Call update to get system info and fill in GUI
+    update()
 
     # Launch GUI
-    window.mainloop()
+    WINDOW.mainloop()
 
 if __name__ == '__main__':
    main()
