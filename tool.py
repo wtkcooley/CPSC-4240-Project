@@ -1,6 +1,8 @@
+import argparse
+from os import mkdir, getcwd, path
 from time import sleep
+from datetime import datetime
 import psutil
-import datetime
 import pandas as pd
 from tkinter import *
 
@@ -10,14 +12,19 @@ HEIGHT = 720 #px
 MAX_PROCESSES = 20
 UPDATE_INTERVAL = 1000 #ms
 FONTSIZE = 8
-CELL_WIDTH = 16
+CELL_WIDTH = 20
 WINDOW = Tk()
+
+parser = argparse.ArgumentParser(
+                    prog='CPSC 4200 Final - System Monitor Tool',
+                    description='This tool expands on the functionality of psutil and its ability to get system info from the os. The tool gets info on the most memory intensive process and all of the network io devices. It displays this info in a GUI and updates it every second as well as saves the first scan in a dated folder in the local project logs directory.',
+                    epilog='Written for Clemsons CPSC 4200 class')
+parser.add_argument('-ng', '--no_gui', action='store_true')
+args = parser.parse_args()
 
 """Builds Dataframe of Process info.
 
-:param process_df: data frame with all process info
-:param system_info: data frame with all system info
-:result: Updates WINDOW with new info
+:return: dataframe with process info
 """
 def get_process_info():      
     #Creating lists to store the corresponding information
@@ -43,7 +50,7 @@ def get_process_info():
         cpu_usage.append(process.cpu_percent(interval=1)/psutil.cpu_count())
         memory_usage.append(round(process.memory_info().rss/(1024*1024),2))
         memory_usage_percentage.append(round(process.memory_percent(),2))
-        create_time.append(datetime.datetime.fromtimestamp(
+        create_time.append(datetime.fromtimestamp(
                             process.create_time()).strftime("%H:%M:%S - %m/%d/%Y"))
         status.append(process.status())
         threads.append(process.num_threads())
@@ -80,6 +87,10 @@ def get_size(bytes):
             return f"{bytes:.2f}{unit}B"
         bytes /= 1024
 
+"""Builds Dataframe of Process info.
+
+:return: dataframe with network info
+"""
 def get_network_info():
     io = psutil.net_io_counters(pernic=True)
     sleep(1)
@@ -100,7 +111,7 @@ def get_network_info():
 """Builds TKinter Window GUI.
 
 :param process_df: data frame with all process info
-:param system_info: data frame with all system info
+:param network_info: data frame with all network info
 :result: Updates WINDOW with new info
 """
 def make_gui(process_df, network_df):
@@ -148,15 +159,24 @@ def update():
     WINDOW.after(1000, update)
 
 def main():
-    # Setup GUI
-    WINDOW.title(TITLE)
-    #WINDOW.geometry(str(WIDTH)+"x"+str(HEIGHT))
+    # Save inital scan to csv file
+    process_df = get_process_info()
+    network_df = get_network_info()
+    time_str = datetime.now().strftime("%H:%M:%S_%m-%d-%Y")
+    log_dir_path = path.join(path.dirname(path.realpath(__file__)) + "/logs", time_str)
+    mkdir(log_dir_path)
+    process_df.to_csv(log_dir_path+f'/Process Scan {time_str}.csv')
+    network_df.to_csv(log_dir_path+f'/Network Scan {time_str}.csv')
 
-    # Call update to get system info and fill in GUI
-    update()
+    if not args.no_gui:
+        # Setup GUI
+        WINDOW.title(TITLE)
 
-    # Launch GUI
-    WINDOW.mainloop()
+        # Call update to get system info and fill in GUI
+        update()
+
+        # Launch GUI
+        WINDOW.mainloop()
 
 if __name__ == '__main__':
    main()
