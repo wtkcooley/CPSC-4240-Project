@@ -163,10 +163,13 @@ def main():
     process_df = get_process_info()
     network_df = get_network_info()
     time_str = datetime.now().strftime("%H:%M:%S_%m-%d-%Y")
-    log_dir_path = path.join(path.dirname(path.realpath(__file__)) + "/logs", time_str)
-    mkdir(log_dir_path)
-    process_df.to_csv(log_dir_path+f'/Process Scan {time_str}.csv')
-    network_df.to_csv(log_dir_path+f'/Network Scan {time_str}.csv')
+    log_dir_path = path.join(path.dirname(path.realpath(__file__)) + "/logs")
+    if not path.exists(log_dir_path):
+        mkdir(log_dir_path)
+    date_dir_path = path.join(log_dir_path, time_str)
+    mkdir(date_dir_path)
+    process_df.to_csv(date_dir_path+f'/Process Scan {time_str}.csv')
+    network_df.to_csv(date_dir_path+f'/Network Scan {time_str}.csv')
 
     if not args.no_gui:
         # Setup GUI
